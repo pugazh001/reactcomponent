@@ -1,0 +1,427 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Container,
+  Grid,
+  TextField,
+  Typography,
+  Paper,
+  Tabs,
+  Tab,
+  Alert,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Checkbox
+} from '@mui/material';
+import axios from 'axios';
+import API_URL from '../../config';
+function Setting() {
+  const [activeTab, setActiveTab] = useState(0);
+  const [companyData, setCompanyData] = useState({
+    name: '',
+    logo: '',
+    frontPageImage: '',
+    description: '',
+    email: '',
+    phone: '',
+    address: '',
+    website: ''
+  });
+  const [logoFile, setLogoFile] = useState(null);
+  const [frontPageFile, setFrontPageFile] = useState(null);
+  const [logoPreview, setLogoPreview] = useState(null);
+  const [frontPagePreview, setFrontPagePreview] = useState(null);
+  const [message, setMessage] = useState({ type: '', text: '' });
+  const [loading, setLoading] = useState(false);
+  
+  // Menu access data
+  const [menuAccessData, setMenuAccessData] = useState([
+    { id: 1, title: 'Dashboard', menu: 'Master', submenu: 'Main', list: 'Dashboard Access', admin: true, owner: true, anchor: false, customer: false },
+    { id: 2, title: 'Laundry Reception', menu: 'Master', submenu: 'Operations', list: 'Reception Management', admin: true, owner: true, anchor: false, customer: false },
+    { id: 3, title: 'Orders', menu: 'Transaction', submenu: 'Order', list: 'Order Management', admin: true, owner: true, anchor: true, customer: true },
+    { id: 4, title: 'Services', menu: 'Master', submenu: 'Service', list: 'Service Management', admin: true, owner: false, anchor: false, customer: false },
+    { id: 5, title: 'Products', menu: 'Master', submenu: 'Product', list: 'Product Management', admin: true, owner: true, anchor: false, customer: false },
+  ]);
+
+  // Fetch company settings on component mount
+  useEffect(() => {
+    const fetchCompanySettings = async () => {
+      try {
+        // Replace with your actual company ID or get it from context/state
+        const companyId = 1; 
+        const response = await axios.get(`${API_URL}/api/v2/superadmin/company-settings/${companyId}`);
+        setCompanyData(response.data);
+      } catch (error) {
+        console.error('Error fetching company settings:', error);
+        setMessage({ type: 'error', text: 'Failed to load company settings' });
+      }
+    };
+
+    fetchCompanySettings();
+  }, []);
+
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setCompanyData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleLogoChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setLogoFile(file);
+      setLogoPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleFrontPageImageChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setFrontPageFile(file);
+      setFrontPagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  // Clean up object URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      if (logoPreview) URL.revokeObjectURL(logoPreview);
+      if (frontPagePreview) URL.revokeObjectURL(frontPagePreview);
+    };
+  }, [logoPreview, frontPagePreview]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      const formData = new FormData();
+      
+      // Append all text fields
+      Object.keys(companyData).forEach(key => {
+        if (key !== 'logo' && key !== 'frontPageImage') {
+          formData.append(key, companyData[key]);
+        }
+      });
+
+      // Append files if they exist
+      if (logoFile) {
+        formData.append('logo', logoFile);
+      }
+
+      if (frontPageFile) {
+        formData.append('frontPageImage', frontPageFile);
+      }
+   
+      // Replace with your actual company ID
+      const companyId = 1;
+      await axios.put(`${API_URL}/api/v2/superadmin/company-settings`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      setMessage({ type: 'success', text: 'Company settings updated successfully' });
+    } catch (error) {
+      console.error('Error updating company settings:', error);
+      setMessage({ type: 'error', text: 'Failed to update company settings' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Paper sx={{ mb: 3 }}>
+        <Tabs
+          value={activeTab}
+          onChange={handleTabChange}
+          indicatorColor="primary"
+          textColor="primary"
+        >
+          <Tab label="MENU ACCESS" />
+          <Tab label="COMPANY SETTINGS" />
+        </Tabs>
+      </Paper>
+
+      {activeTab === 1 && (
+        <Card>
+          <CardContent>
+            <Typography variant="h5" component="h2" gutterBottom>
+              Company Settings
+            </Typography>
+
+            {message.text && (
+              <Alert severity={message.type} sx={{ mb: 2 }}>
+                {message.text}
+              </Alert>
+            )}
+
+            <form onSubmit={handleSubmit}>
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={12}>
+                  <TextField
+                    fullWidth
+                    label="Company Name"
+                    name="name"
+                    value={companyData.name}
+                    onChange={handleInputChange}
+                    margin="normal"
+                    required
+                  />
+                </Grid>
+
+             
+                <Grid item xs={12} md={6}>
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="subtitle1" gutterBottom>
+                      Company Logo
+                    </Typography>
+                    <Button
+                      variant="outlined"
+                      component="label"
+                    >
+                      UPLOAD LOGO
+                      <input
+                        type="file"
+                        hidden
+                        accept="image/*"
+                        onChange={handleLogoChange}
+                      />
+                    </Button>
+                    {(logoPreview || companyData.logo) && (
+                      <Box sx={{ mt: 2 }}>
+                        <img 
+                          src={logoPreview || `${API_URL}/uploads/company/logo/${companyData.logo}`} 
+                          alt="Company Logo Preview" 
+                          style={{ maxWidth: '200px', maxHeight: '200px', objectFit: 'contain' }}
+                        />
+                        <Typography variant="body2" sx={{ mt: 1 }}>
+                          {logoFile ? logoFile.name : 'Current logo uploaded'}
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+                </Grid>
+
+           
+                <Grid item xs={12} md={6}>
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="subtitle1" gutterBottom>
+                      Front Page Image
+                    </Typography>
+                    <Button
+                      variant="outlined"
+                      component="label"
+                    >
+                      UPLOAD IMAGE
+                      <input
+                        type="file"
+                        hidden
+                        accept="image/*"
+                        onChange={handleFrontPageImageChange}
+                      />
+                    </Button>
+                    {(frontPagePreview || companyData.frontPageImage) && (
+                      <Box sx={{ mt: 2 }}>
+                        <img 
+                          src={frontPagePreview ||`${API_URL}/uploads/company/frontpage/${companyData.frontPageImage}`} 
+                          alt="Front Page Image Preview" 
+                          style={{ maxWidth: '300px', maxHeight: '300px', objectFit: 'contain' }}
+                        />
+                        <Typography variant="body2" sx={{ mt: 1 }}>
+                          {frontPageFile ? frontPageFile.name : 'Current front page image uploaded'}
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+                </Grid>
+
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Front Page Description"
+                    name="description"
+                    value={companyData.description}
+                    onChange={handleInputChange}
+                    margin="normal"
+                    multiline
+                    rows={4}
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Contact Email"
+                    name="email"
+                    type="email"
+                    value={companyData.email}
+                    onChange={handleInputChange}
+                    margin="normal"
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Contact Phone"
+                    name="phone"
+                    value={companyData.phone}
+                    onChange={handleInputChange}
+                    margin="normal"
+                  />
+                </Grid>
+
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Company Address"
+                    name="address"
+                    value={companyData.address}
+                    onChange={handleInputChange}
+                    margin="normal"
+                    multiline
+                    rows={3}
+                  />
+                </Grid>
+
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Website URL"
+                    name="website"
+                    value={companyData.website}
+                    onChange={handleInputChange}
+                    margin="normal"
+                  />
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    color="primary"
+                    disabled={loading}
+                    sx={{ mt: 2 }}
+                  >
+                    SAVE COMPANY SETTINGS
+                  </Button>
+                </Grid>
+              </Grid>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {activeTab === 0 && (
+        <Card>
+          <CardContent>
+            <Typography variant="h5" component="h2" gutterBottom>
+              Menu Access Rights
+            </Typography>
+            
+            <TableContainer component={Paper} sx={{ mt: 3 }}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>ID</TableCell>
+                    <TableCell>Title</TableCell>
+                    <TableCell>Menu</TableCell>
+                    <TableCell>Submenu</TableCell>
+                    <TableCell>List</TableCell>
+                    <TableCell>Admin</TableCell>
+                    <TableCell>Owner</TableCell>
+                    <TableCell>Anchor</TableCell>
+                    <TableCell>Customer</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {menuAccessData.map((row) => (
+                    <TableRow key={row.id}>
+                      <TableCell>{row.id}</TableCell>
+                      <TableCell>{row.title}</TableCell>
+                      <TableCell>{row.menu}</TableCell>
+                      <TableCell>{row.submenu}</TableCell>
+                      <TableCell>{row.list}</TableCell>
+                      <TableCell>
+                        <Checkbox 
+                          checked={row.admin} 
+                          onChange={(e) => {
+                            const updatedData = menuAccessData.map(item => 
+                              item.id === row.id ? {...item, admin: e.target.checked} : item
+                            );
+                            setMenuAccessData(updatedData);
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Checkbox 
+                          checked={row.owner} 
+                          onChange={(e) => {
+                            const updatedData = menuAccessData.map(item => 
+                              item.id === row.id ? {...item, owner: e.target.checked} : item
+                            );
+                            setMenuAccessData(updatedData);
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Checkbox 
+                          checked={row.anchor} 
+                          onChange={(e) => {
+                            const updatedData = menuAccessData.map(item => 
+                              item.id === row.id ? {...item, anchor: e.target.checked} : item
+                            );
+                            setMenuAccessData(updatedData);
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Checkbox 
+                          checked={row.customer} 
+                          onChange={(e) => {
+                            const updatedData = menuAccessData.map(item => 
+                              item.id === row.id ? {...item, customer: e.target.checked} : item
+                            );
+                            setMenuAccessData(updatedData);
+                          }}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            
+            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
+              <Button 
+                variant="contained" 
+                color="primary"
+                onClick={() => alert('Menu access rights saved!')}
+              >
+                SAVE MENU ACCESS
+              </Button>
+            </Box>
+          </CardContent>
+        </Card>
+      )}
+    </Container>
+  );
+}
+
+export default Setting;
